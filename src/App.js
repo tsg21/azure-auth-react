@@ -1,48 +1,41 @@
 import logo from './logo.svg';
 import './App.css';
-import { AzureAD, AuthenticationState } from 'react-aad-msal';
  
-
-import { authProvider } from './authProvider';
+import { msalInstance } from './msalInstance';
 import Content from './Content';
+import { useEffect, useState } from 'react';
 
-function App() {
-  return (
-    <>
-  <AzureAD provider={authProvider} forceLogin={false}>{
-  ({login, logout, authenticationState, error, accountInfo}) => {
-      switch (authenticationState) {
-        case AuthenticationState.Authenticated:
-          return (
-            <>
-            <p>
-              <span>Welcome, {accountInfo.account.name}!</span>
-              <button onClick={logout}>Logout</button>
-              
-            </p>
-            <Content />
-            </>
-          );
-        case AuthenticationState.Unauthenticated:
-          return (
-            <div>
-              {error && <p><span>An error occured during authentication, please try again!</span></p>}
-              <p>
-                <span>Hey stranger, you look new!</span>
-                <button onClick={login}>Login</button>
-              </p>
-            </div>
-          );
-        case AuthenticationState.InProgress:
-          return (<p>Authenticating... <button onClick={login}>Login</button></p>);
+const App = () =>  {
+  const [tokenResponse, setTokenResponse] = useState(null)
+  const [loginState, setLoginState] = useState("waiting")
+
+  useEffect(() => {
+    msalInstance.handleRedirectPromise().then((tokenResponse) => {
+      if (tokenResponse) {
+        console.log("tokenResponse", tokenResponse)
+        setLoginState("loggedin")
+        setTokenResponse(tokenResponse)
+      } else {
+        console.log("No tokenResponse")
+        setLoginState("dologin")
       }
-    }}
-    </AzureAD>
-    </>
-    
+    }).catch((error) => {
+      console.log("login err", error)
+    })
+  }, [])
 
+  const dologin = () => {
+      try {
+        msalInstance.loginRedirect({});
+      } catch (err) {
+          console.log(err)
+      }
+  }
+  console.log("setup") 
   
-  );
+  return <><p>{loginState}</p>
+    <button onClick={dologin}>login</button>
+  </>
 }
 
 export default App;
