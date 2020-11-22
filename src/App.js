@@ -1,24 +1,47 @@
 import logo from './logo.svg';
 import './App.css';
+import { AzureAD, AuthenticationState } from 'react-aad-msal';
+ 
+
+import { authProvider } from './authProvider';
+import Content from './Content';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <>
+  <AzureAD provider={authProvider} forceLogin={false}>{
+  ({login, logout, authenticationState, error, accountInfo}) => {
+      switch (authenticationState) {
+        case AuthenticationState.Authenticated:
+          return (
+            <>
+            <p>
+              <span>Welcome, {accountInfo.account.name}!</span>
+              <button onClick={logout}>Logout</button>
+              
+            </p>
+            <Content />
+            </>
+          );
+        case AuthenticationState.Unauthenticated:
+          return (
+            <div>
+              {error && <p><span>An error occured during authentication, please try again!</span></p>}
+              <p>
+                <span>Hey stranger, you look new!</span>
+                <button onClick={login}>Login</button>
+              </p>
+            </div>
+          );
+        case AuthenticationState.InProgress:
+          return (<p>Authenticating... <button onClick={login}>Login</button></p>);
+      }
+    }}
+    </AzureAD>
+    </>
+    
+
+  
   );
 }
 
