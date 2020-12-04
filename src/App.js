@@ -1,21 +1,23 @@
-import logo from './logo.svg';
 import './App.css';
+import jwt_decode from "jwt-decode";
  
 import { msalInstance } from './msalInstance';
-import Content from './Content';
 import { useEffect, useState } from 'react';
-import { InteractionRequiredAuthError, LogLevel } from '@azure/msal-browser';
+import { InteractionRequiredAuthError } from '@azure/msal-browser';
 
 const App = () =>  {
-  const [tokenResponse, setTokenResponse] = useState(null)
+  const [idToken, setIdToken] = useState(null)
   const [loginState, setLoginState] = useState("waiting")
+  const [accessToken, setAccessToken] = useState(null)
+  const [account, setAccount] = useState(null)
 
   useEffect(() => {
     msalInstance.handleRedirectPromise().then((tokenResponse) => {
       if (tokenResponse) {
         console.log("tokenResponse", tokenResponse)
         setLoginState("loggedin")
-        setTokenResponse(tokenResponse)
+        setIdToken(tokenResponse.idToken)
+        setAccount(tokenResponse.account)
       } else {
         console.log("No tokenResponse")
         setLoginState("dologin")
@@ -26,17 +28,19 @@ const App = () =>  {
   }, [])
 
   useEffect(() => {
-    if (loginState !== "loggedin") {
+    if (!account) {
       return
     }
 
+    console.log(msalInstance.getAllAccounts())
     var request = {
         scopes: ["api://backend1/Read", "api://backend1/Write"],
-        account: msalInstance.getAllAccounts()[0],
+        account: account
     };
     
     msalInstance.acquireTokenSilent(request).then(tokenResponse => {
         console.log("Access token: ", tokenResponse)
+        setAccessToken(tokenResponse.accessToken)
     }).catch(error => {
         if (error instanceof InteractionRequiredAuthError) {
             // fallback to interaction when silent call fails
@@ -45,12 +49,12 @@ const App = () =>  {
           console.log(error)
         }
     });
-  }, [loginState])
+  }, [account])
 
   const dologin = () => {
       try {
         var loginRequest = {
-          scopes: ["user.read", "api://backend1/Read", "api://backend1/Write"]
+          scopes: ["api://backend1/Read", "api://backend1/Write"]
         };
 
         msalInstance.loginRedirect(loginRequest);
@@ -60,7 +64,13 @@ const App = () =>  {
   }  
   return <><p>{loginState}</p>
     <button onClick={dologin}>login</button>
+    <p>Id Token:</p>
+    <pre>{idToken ? JSON.stringify(jwt_decode(idToken), null, 2) : null}</pre>
+    <p>Access token:</p>
+    <pre>{accessToken ? JSON.stringify(jwt_decode(accessToken), null, 2) : null}</pre>
+    <p>Account</p>
+    <pre>{account ? JSON.stringify(account, null, 2) : null}</pre>
   </>
 }
 
-export default App;
+export default App
